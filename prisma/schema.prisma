@@ -1,0 +1,12 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Los modelos Category y Transaction se agregan en las fases 1 y 2.
+// Esta fase 0 deja Prisma configurado pero vacío de modelos para que
+// el cliente generado exista y los archivos de src/lib/prisma.ts compilen.
