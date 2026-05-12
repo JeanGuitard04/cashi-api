@@ -1,0 +1,32 @@
+meta {
+  name: Get Balance
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/transactions/balance
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Retorna el balance general: totalIncome, totalExpense y balance (income - expense).
+
+  ## Respuesta
+  Devuelve 200 con un objeto:
+
+  ```json
+  {
+    "totalIncome": 850000,
+    "totalExpense": 320000,
+    "balance": 530000
+  }
+  ```
+
+  Si no hay transacciones, los tres valores son 0.
+}
