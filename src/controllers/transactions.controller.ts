@@ -12,6 +12,15 @@ export const getTransactions = async (c: Context) => {
   return c.json(transactions)
 }
 
+// GET /transactions/balance
+export const getBalance = async (c: Context) => {
+  const sums = await transactionsRepository.sumByType()
+  const totalIncome  = sums.find(s => s.type === 'income')?.total  ?? 0
+  const totalExpense = sums.find(s => s.type === 'expense')?.total ?? 0
+  const balance = totalIncome - totalExpense
+  return c.json({ totalIncome, totalExpense, balance })
+}
+
 // GET /transactions/:id
 export const getTransactionById = async (c: Context) => {
   const id = Number(c.req.param('id'))

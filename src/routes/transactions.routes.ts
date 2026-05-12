@@ -4,10 +4,13 @@ import {
   getTransactionById,
   createTransaction,
   updateTransaction,
-  deleteTransaction
+  deleteTransaction,
+  getBalance
 } from '../controllers/transactions.controller.js'
 
 const transactionsRouter = new Hono()
+
+transactionsRouter.get('/balance', getBalance)
 
 transactionsRouter.get('/',       getTransactions)
 transactionsRouter.get('/:id',    getTransactionById)
