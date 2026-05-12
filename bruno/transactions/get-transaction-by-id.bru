@@ -1,0 +1,21 @@
+meta {
+  name: Get Transaction by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/transactions/{{transactionId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Retorna una transacción por su ID con su categoría incluida.
+  Devuelve 404 si no existe.
+}
+​

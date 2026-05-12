@@ -1,0 +1,41 @@
+meta {
+  name: Update Transaction
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/transactions/{{transactionId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "amount": 900000,
+    "description": "Sueldo mensual + bono"
+  }
+}
+
+docs {
+  Actualiza parcialmente una transacción existente. Todos los campos son opcionales.
+
+  ## Body (todos opcionales)
+  - amount: Monto entero positivo
+  - type: "income" o "expense"
+  - description: Descripción libre (max 255)
+  - date: Fecha ISO 8601
+  - categoryId: ID de la categoría (debe existir)
+
+  ## Respuesta
+  Devuelve 200 con la transacción actualizada.
+  Devuelve 400 si el body es inválido.
+  Devuelve 404 si la transacción no existe.
+  Devuelve 422 si el nuevo categoryId no existe.
+}
+​

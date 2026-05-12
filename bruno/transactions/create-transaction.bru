@@ -1,0 +1,48 @@
+meta {
+  name: Create Transaction
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/transactions
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "amount": 850000,
+    "type": "income",
+    "description": "Sueldo mensual",
+    "date": "2026-05-01T00:00:00.000Z",
+    "categoryId": {{categoryId}}
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.id) {
+    bru.setEnvVar("transactionId", res.body.id);
+  }
+}
+
+docs {
+  Crea una nueva transacción asociada a una categoría existente.
+
+  ## Body
+  - amount: Monto entero positivo (requerido)
+  - type: "income" o "expense" (requerido)
+  - description: Descripción libre (opcional, max 255)
+  - date: Fecha ISO 8601 (requerida)
+  - categoryId: ID de la categoría (requerido, debe existir)
+
+  ## Respuesta
+  Devuelve 201 con la transacción creada (incluyendo su categoría).
+  Devuelve 400 si el body es inválido.
+  Devuelve 422 si categoryId no existe en la base de datos.
+}
