@@ -89,6 +89,34 @@ El servidor queda disponible en `http://localhost:3000`. La ruta `GET /` respond
 | PATCH  | `/categories/:id` | Actualiza una categoría |
 | DELETE | `/categories/:id` | Elimina una categoría |
 
+### Transacciones
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET    | `/transactions`     | Lista todas las transacciones (incluye su categoría) |
+| GET    | `/transactions/:id` | Detalle de una transacción |
+| POST   | `/transactions`     | Crea una transacción |
+| PATCH  | `/transactions/:id` | Actualiza una transacción |
+| DELETE | `/transactions/:id` | Elimina una transacción |
+
+**Body de creación de transacción:**
+
+```json
+{
+  "amount": 850000,
+  "type": "income",
+  "description": "Sueldo mensual",
+  "date": "2026-05-01T00:00:00.000Z",
+  "categoryId": 1
+}
+```
+
+- `amount`: número entero positivo
+- `type`: `"income"` o `"expense"`
+- `description`: opcional, máximo 255 caracteres
+- `date`: fecha ISO 8601
+- `categoryId`: referencia a una categoría existente (si no existe, responde 422)
+
 ---
 
 ## Arquitectura N-Layer
@@ -111,19 +139,23 @@ Request → Routes → Controller → Repository → Base de datos
 ├── bruno/                  ← colección Bruno para probar la API
 ├── docs/fases/             ← documentación interna por fase de desarrollo
 ├── prisma/
-│   ├── schema.prisma       ← modelo Category (Transaction se agrega en fase 2)
+│   ├── schema.prisma       ← modelos Category y Transaction + enum TransactionType
 │   └── migrations/         ← migraciones versionadas
 ├── prisma.config.ts
 ├── src/
 │   ├── index.ts            ← entry point + mount de routers
 │   ├── schemas/
-│   │   └── categories.schema.ts
+│   │   ├── categories.schema.ts
+│   │   └── transactions.schema.ts
 │   ├── repositories/
-│   │   └── categories.repository.ts
+│   │   ├── categories.repository.ts
+│   │   └── transactions.repository.ts
 │   ├── controllers/
-│   │   └── categories.controller.ts
+│   │   ├── categories.controller.ts
+│   │   └── transactions.controller.ts
 │   ├── routes/
-│   │   └── categories.routes.ts
+│   │   ├── categories.routes.ts
+│   │   └── transactions.routes.ts
 │   ├── lib/
 │   │   ├── prisma.ts
 │   │   └── prisma-error.ts
