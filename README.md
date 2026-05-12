@@ -93,11 +93,26 @@ El servidor queda disponible en `http://localhost:3000`. La ruta `GET /` respond
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET    | `/transactions`     | Lista todas las transacciones (incluye su categoría) |
-| GET    | `/transactions/:id` | Detalle de una transacción |
-| POST   | `/transactions`     | Crea una transacción |
-| PATCH  | `/transactions/:id` | Actualiza una transacción |
-| DELETE | `/transactions/:id` | Elimina una transacción |
+| GET    | `/transactions`         | Lista todas las transacciones (incluye su categoría) |
+| GET    | `/transactions/balance` | Balance general: totalIncome, totalExpense, balance |
+| GET    | `/transactions/:id`     | Detalle de una transacción |
+| POST   | `/transactions`         | Crea una transacción |
+| PATCH  | `/transactions/:id`     | Actualiza una transacción |
+| DELETE | `/transactions/:id`     | Elimina una transacción |
+
+**Respuesta de `GET /transactions/balance`:**
+
+```json
+{
+  "totalIncome": 850000,
+  "totalExpense": 320000,
+  "balance": 530000
+}
+```
+
+- `totalIncome`: suma de `amount` de transacciones con `type = "income"`
+- `totalExpense`: suma de `amount` de transacciones con `type = "expense"`
+- `balance`: `totalIncome - totalExpense`
 
 **Body de creación de transacción:**
 
