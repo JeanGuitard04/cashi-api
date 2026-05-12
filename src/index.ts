@@ -1,13 +1,15 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import categoriesRouter from './routes/categories.routes.js'
 
 const app = new Hono()
 
 // Health check
 app.get('/', (c) => c.json({ status: 'ok', message: 'Cashi API — Unidad 2' }))
 
-// Los routers de categories y transactions se montan en las fases 1, 2 y 3.
+// Montar routers por recurso
+app.route('/categories', categoriesRouter)
 
 const PORT = Number(process.env.PORT) || 3000
 
