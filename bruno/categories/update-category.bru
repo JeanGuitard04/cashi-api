@@ -1,0 +1,35 @@
+meta {
+  name: Update Category
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/categories/{{categoryId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Alimentación y Bebidas"
+  }
+}
+
+docs {
+  Actualiza una categoría existente.
+
+  ## Body
+  - name: Nuevo nombre de la categoría (requerido, max 50 chars, único)
+
+  ## Respuesta
+  Devuelve 200 con la categoría actualizada.
+  Devuelve 400 si el body es inválido.
+  Devuelve 404 si la categoría no existe.
+  Devuelve 409 si el nuevo nombre choca con otra categoría existente.
+}
