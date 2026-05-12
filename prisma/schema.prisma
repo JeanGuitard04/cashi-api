@@ -7,8 +7,25 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TransactionType {
+  income
+  expense
+}
+
 // Una categoría puede tener muchas transacciones (one-to-many).
 model Category {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  transactions Transaction[]
+}
+
+// Una transacción pertenece a una categoría.
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  amount      Int
+  type        TransactionType
+  description String?
+  date        DateTime
+  category    Category        @relation(fields: [categoryId], references: [id])
+  categoryId  Int
 }
