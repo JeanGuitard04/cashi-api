@@ -77,6 +77,49 @@ El servidor queda disponible en `http://localhost:3000`. La ruta `GET /` respond
 
 ---
 
+## Verificación rápida
+
+Una vez levantado el servidor, este bloque crea datos de ejemplo y confirma el balance:
+
+```bash
+curl -X POST http://localhost:3000/categories \
+  -H 'Content-Type: application/json' -d '{"name":"Sueldo"}'
+
+curl -X POST http://localhost:3000/transactions \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":850000,"type":"income","date":"2026-05-01T00:00:00.000Z","categoryId":1}'
+
+curl -X POST http://localhost:3000/transactions \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":320000,"type":"expense","date":"2026-05-03T00:00:00.000Z","categoryId":1}'
+
+curl http://localhost:3000/transactions/balance
+# → {"totalIncome":850000,"totalExpense":320000,"balance":530000}
+```
+
+---
+
+## Cómo probar con Bruno
+
+La carpeta `bruno/` contiene una colección lista para [Bruno](https://www.usebruno.com/), un cliente API open source.
+
+1. **Instalar Bruno** — `brew install --cask bruno` o descargar desde el sitio oficial.
+2. **Open Collection** — apuntar a la carpeta `bruno/` de este repo (no al archivo `bruno.json`).
+3. **Seleccionar el environment "Development"** — dropdown arriba a la derecha del editor de la request. Sin este paso `{{baseUrl}}` queda sin resolver y todo falla con `Invalid URL`.
+
+**Orden recomendado de pruebas:**
+
+1. `Categories → Create Category` (setea `{{categoryId}}` automáticamente).
+2. `Categories → Get Categories`.
+3. `Transactions → Create Transaction` (usa `{{categoryId}}`, setea `{{transactionId}}`).
+4. `Transactions → Get Transactions` (verifica que viene la categoría anidada).
+5. `Transactions → Get Balance`.
+6. `Transactions → Update Transaction` y `Delete Transaction`.
+
+Click derecho en la colección raíz → **Run** encadena todos los requests automáticamente.
+
+---
+
 ## Endpoints
 
 ### Categorías
@@ -181,4 +224,40 @@ Request → Routes → Controller → Repository → Base de datos
 ```
 
 ---
+
+## Errores comunes
+
+**`Can't reach database server`** — La BD no está corriendo. Ejecutar `docker compose up -d`.
+
+**`The table "Transaction" does not exist`** — Faltan migraciones. Ejecutar `yarn prisma:migrate`.
+
+**`Environment variable not found: DATABASE_URL`** — Falta el archivo `.env`. Ejecutar `cp .env.example .env`.
+
+**`Cannot read properties of undefined (reading 'findMany')`** — El cliente Prisma quedó desactualizado tras cambiar el schema. Limpiar y regenerar:
+
+```bash
+rm -rf src/generated/prisma
+yarn prisma:generate
+```
+
+**`Invalid URL` en Bruno** — El environment "Development" no está seleccionado. Arriba a la derecha del editor de la request, cambiar el dropdown `No Environment` a `Development`.
+
+**`tsx watch` no recargó cambios estructurales** — A veces el hot reload no detecta cambios en archivos de routes/index. Reiniciar manualmente:
+
+```bash
+pkill -f "tsx watch src/index.ts"
+yarn dev
+```
+
+---
+
+## Uso de IA
+
+Este proyecto fue desarrollado con apoyo de **Claude Sonnet 4.6** vía Claude Code, en las siguientes situaciones:
+
+- **Asesoría técnica** - Consultas puntuales sobre detalles del repositorio de referencia.
+- **CRUD de transacciones** — validación de fechas con `z.coerce.date()`, y el patrón `include` para traer la categoría anidada.
+- **Bug de Endpoint de balance** — Asesoramiento sobre el orden de declaración de rutas (`/balance` antes de `/:id`).
+- **Generar archivos Bruno** - para cada metodo CRUD de las entidades + balance.
+
 
