@@ -6,6 +6,12 @@ API REST de finanzas personales construida con arquitectura N-Layer. Permite reg
 
 ---
 
+## Video explicativo: 
+
+https://youtu.be/0J_7l4rZoHs
+
+---
+ß
 ## Requisitos previos
 
 - Node.js 22.x
