@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { authMiddleware } from './middlewares/auth.middleware.js'
@@ -11,6 +12,8 @@ import transactionsRouter from './routes/transactions.routes.js'
 const app = new Hono<AppEnv>()
 
 app.use('*', cors())
+
+app.use('/uploads/*', serveStatic({ root: './' }))
 
 app.use('/categories/*',   authMiddleware)
 app.use('/transactions/*', authMiddleware)

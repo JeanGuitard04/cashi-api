@@ -5,9 +5,19 @@ import {
   updateTransactionSchema
 } from '../schemas/transactions.schema.js'
 import { parsePrismaError } from '../lib/prisma-error.js'
+import { uploadFile } from '../lib/upload.js'
 import type { AppEnv } from '../lib/hono-env.js'
 
 type Ctx = Context<AppEnv>
+
+// POST /transactions/upload — recibe multipart/form-data con campo "receipt", devuelve { url }
+export const uploadReceipt = async (c: Ctx) => {
+  const body = await c.req.parseBody()
+  const file = body.receipt as File | undefined
+  const result = await uploadFile(file)
+  if (!result.ok) return c.json({ error: result.error }, result.status)
+  return c.json({ url: result.url })
+}
 
 // GET /transactions
 export const getTransactions = async (c: Ctx) => {

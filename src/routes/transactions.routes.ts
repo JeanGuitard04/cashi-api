@@ -5,12 +5,15 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  getBalance
+  getBalance,
+  uploadReceipt
 } from '../controllers/transactions.controller.js'
+import type { AppEnv } from '../lib/hono-env.js'
 
-const transactionsRouter = new Hono()
+const transactionsRouter = new Hono<AppEnv>()
 
-transactionsRouter.get('/balance', getBalance)
+transactionsRouter.get('/balance',  getBalance)
+transactionsRouter.post('/upload',  uploadReceipt)
 
 transactionsRouter.get('/',       getTransactions)
 transactionsRouter.get('/:id',    getTransactionById)

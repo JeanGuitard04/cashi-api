@@ -21,3 +21,7 @@ src/generated/
 
 # OS
 .DS_Store
+
+# Uploads locales (estrategia local de upload — los archivos no se commitean)
+uploads/*
+!uploads/.gitkeep

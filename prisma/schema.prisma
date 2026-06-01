@@ -35,6 +35,9 @@ model Transaction {
   type        TransactionType
   description String?
   date        DateTime
+  receiptUrl  String?
+  latitude    Float?
+  longitude   Float?
   category    Category        @relation(fields: [categoryId], references: [id])
   categoryId  Int
   user        User            @relation(fields: [userId], references: [id])

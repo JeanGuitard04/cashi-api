@@ -1,0 +1,41 @@
+meta {
+  name: Upload Receipt
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/transactions/upload
+  body: multipartForm
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Authorization: Bearer {{token}}
+}
+
+body:multipart-form {
+  receipt: @file()
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.url) {
+    bru.setEnvVar("receiptUrl", res.body.url);
+  }
+}
+
+docs {
+  Sube un comprobante (foto). Devuelve { url } que se usa luego al crear/editar una transacción en receiptUrl.
+  
+  ## Body (multipart/form-data)
+  - receipt: archivo (JPEG, PNG o WebP, máximo 5 MB)
+  
+  ## Respuesta
+  200 con { url }. Setea {{receiptUrl}} automáticamente.
+  400 si el archivo es de tipo no permitido, excede 5 MB, o falta el campo.
+  
+  ## Storage
+  Si todas las variables R2_* están en .env → sube a Cloudflare R2 y devuelve URL pública.
+  Si falta cualquiera → guarda en ./uploads/ local y devuelve "/uploads/<uuid>.<ext>".
+}
