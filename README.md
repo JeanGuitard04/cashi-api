@@ -1,17 +1,18 @@
-# Cashi API — Unidad 2
+# Cashi API — Unidad 3
 
-API REST de finanzas personales construida con arquitectura N-Layer. Permite registrar ingresos y egresos, organizarlos por categoría y consultar el balance general.
+API REST de finanzas personales con **arquitectura N-Layer**, **autenticación JWT** y **subida de comprobantes**. Cada usuario gestiona sus propias transacciones, organizadas por categorías globales, y puede adjuntar la foto del comprobante a cada movimiento.
 
-**Stack:** Node.js · TypeScript · Hono · Prisma 7 · Zod · PostgreSQL · Docker
+**Stack:** Node.js · TypeScript · Hono · Prisma 7 · Zod · PostgreSQL · Docker · bcryptjs · jsonwebtoken · Cloudflare R2 (opcional)
+
+---
+
+## Video explicativo
+
+- **Unidad 2** (CRUD + balance): https://youtu.be/0J_7l4rZoHs
+- **Unidad 3** (auth + comprobantes): https://youtu.be/ftUPH_i4-14
 
 ---
 
-## Video explicativo: 
-
-https://youtu.be/0J_7l4rZoHs
-
----
-ß
 ## Requisitos previos
 
 - Node.js 22.x
@@ -22,84 +23,72 @@ https://youtu.be/0J_7l4rZoHs
 
 ## Instalación y puesta en marcha
 
-### 1. Instalar dependencias
-
 ```bash
+# 1. Dependencias
 yarn install
-```
 
-### 2. Configurar variables de entorno
-
-```bash
+# 2. Variables de entorno
 cp .env.example .env
-```
+# Editar .env y poner una JWT_SECRET larga. En producción:
+#   openssl rand -base64 32
 
-El `.env` por defecto apunta a la base de datos que levanta Docker:
-
-```
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/cashidb"
-```
-
-### 3. Levantar la base de datos
-
-```bash
+# 3. Base de datos
 docker compose up -d
-```
 
-### 4. Generar el cliente de Prisma
-
-```bash
+# 4. Cliente Prisma y migraciones
 yarn prisma:generate
-```
-
-### 5. Correr las migraciones
-
-```bash
 yarn prisma:migrate
-```
 
-Crea las tablas en la base de datos. La primera vez pedirá un nombre para la migración, puedes escribir `init`.
-
-### 6. Iniciar el servidor
-
-```bash
+# 5. Servidor
 yarn dev
+# → http://localhost:3000
 ```
-
-El servidor queda disponible en `http://localhost:3000`. La ruta `GET /` responde con un health check.
 
 ---
 
-## Scripts disponibles
+## Variables de entorno
 
-| Script | Descripción |
-|---|---|
-| `yarn dev` | Servidor en modo desarrollo con hot reload |
-| `yarn build` | Compila el proyecto con tsdown |
-| `yarn start` | Corre el build compilado |
-| `yarn prisma:generate` | Regenera el cliente Prisma desde el schema |
-| `yarn prisma:migrate` | Crea y aplica migraciones |
-| `yarn prisma:studio` | Abre Prisma Studio |
+| Variable | Requerida | Descripción |
+|---|---|---|
+| `DATABASE_URL` | ✅ | Connection string de Postgres. Default: el de Docker Compose |
+| `PORT` | ❌ | Puerto del servidor. Default `3000` |
+| `JWT_SECRET` | ✅ | Secreto para firmar tokens. En producción: `openssl rand -base64 32` |
+| `JWT_EXPIRES_IN` | ❌ | Vida del token. Default `7d` |
+| `R2_ACCOUNT_ID` | ❌ | Cloudflare R2 account ID (storage opcional) |
+| `R2_ACCESS_KEY_ID` | ❌ | R2 access key |
+| `R2_SECRET_ACCESS_KEY` | ❌ | R2 secret |
+| `R2_BUCKET_NAME` | ❌ | Nombre del bucket en R2 |
+| `R2_PUBLIC_URL` | ❌ | URL pública del bucket (`https://pub-xxxxx.r2.dev`) |
+
+Si las 5 variables `R2_*` están definidas, los uploads van a R2. Si falta cualquiera, los archivos se guardan en `./uploads/` local y se sirven en `/uploads/*`.
 
 ---
 
 ## Verificación rápida
 
-Una vez levantado el servidor, este bloque crea datos de ejemplo y confirma el balance:
-
 ```bash
-curl -X POST http://localhost:3000/categories \
-  -H 'Content-Type: application/json' -d '{"name":"Sueldo"}'
-
-curl -X POST http://localhost:3000/transactions \
+# Registrar
+TOKEN=$(curl -s -X POST localhost:3000/auth/register \
   -H 'Content-Type: application/json' \
+  -d '{"email":"demo@cashi.app","password":"demopass123"}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+# Crear categoría (auth)
+curl -X POST localhost:3000/categories \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Sueldo"}'
+
+# Crear 2 transacciones (auth)
+curl -X POST localhost:3000/transactions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"amount":850000,"type":"income","date":"2026-05-01T00:00:00.000Z","categoryId":1}'
 
-curl -X POST http://localhost:3000/transactions \
-  -H 'Content-Type: application/json' \
+curl -X POST localhost:3000/transactions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"amount":320000,"type":"expense","date":"2026-05-03T00:00:00.000Z","categoryId":1}'
 
-curl http://localhost:3000/transactions/balance
+# Balance del usuario
+curl -H "Authorization: Bearer $TOKEN" localhost:3000/transactions/balance
 # → {"totalIncome":850000,"totalExpense":320000,"balance":530000}
 ```
 
@@ -107,61 +96,58 @@ curl http://localhost:3000/transactions/balance
 
 ## Cómo probar con Bruno
 
-La carpeta `bruno/` contiene una colección lista para [Bruno](https://www.usebruno.com/), un cliente API open source.
+1. Instalar Bruno (`brew install --cask bruno`) y abrir la carpeta `bruno/`.
+2. **Seleccionar el environment `Development`** en el dropdown arriba a la derecha. Sin esto, las requests fallan con `Invalid URL`.
+3. Orden recomendado:
+   1. `Auth → Register` (setea `{{token}}` automáticamente)
+   2. `Categories → Create Category` (setea `{{categoryId}}`)
+   3. `Transactions → Upload Receipt` (setea `{{receiptUrl}}`)
+   4. `Transactions → Create Transaction` (usa `{{categoryId}}`, setea `{{transactionId}}`)
+   5. `Transactions → Get Balance`
+   6. `Transactions → Update Transaction` / `Delete Transaction`
 
-1. **Instalar Bruno** — `brew install --cask bruno` o descargar desde el sitio oficial.
-2. **Open Collection** — apuntar a la carpeta `bruno/` de este repo (no al archivo `bruno.json`).
-3. **Seleccionar el environment "Development"** — dropdown arriba a la derecha del editor de la request. Sin este paso `{{baseUrl}}` queda sin resolver y todo falla con `Invalid URL`.
-
-**Orden recomendado de pruebas:**
-
-1. `Categories → Create Category` (setea `{{categoryId}}` automáticamente).
-2. `Categories → Get Categories`.
-3. `Transactions → Create Transaction` (usa `{{categoryId}}`, setea `{{transactionId}}`).
-4. `Transactions → Get Transactions` (verifica que viene la categoría anidada).
-5. `Transactions → Get Balance`.
-6. `Transactions → Update Transaction` y `Delete Transaction`.
-
-Click derecho en la colección raíz → **Run** encadena todos los requests automáticamente.
+Click derecho en la colección raíz → **Run** encadena toda la secuencia automáticamente.
 
 ---
 
 ## Endpoints
 
-### Categorías
+`✅` indica que el endpoint exige `Authorization: Bearer <token>`. Las rutas marcadas `❌` son públicas.
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET    | `/categories`     | Lista todas las categorías |
-| GET    | `/categories/:id` | Detalle de una categoría |
-| POST   | `/categories`     | Crea una categoría |
-| PATCH  | `/categories/:id` | Actualiza una categoría |
-| DELETE | `/categories/:id` | Elimina una categoría |
+### Autenticación
 
-### Transacciones
+| Auth | Método | Ruta | Descripción |
+|---|---|---|---|
+| ❌ | POST | `/auth/register` | Crea cuenta. Devuelve `{ token, user }` |
+| ❌ | POST | `/auth/login`    | Login. Devuelve `{ token, user }` |
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET    | `/transactions`         | Lista todas las transacciones (incluye su categoría) |
-| GET    | `/transactions/balance` | Balance general: totalIncome, totalExpense, balance |
-| GET    | `/transactions/:id`     | Detalle de una transacción |
-| POST   | `/transactions`         | Crea una transacción |
-| PATCH  | `/transactions/:id`     | Actualiza una transacción |
-| DELETE | `/transactions/:id`     | Elimina una transacción |
-
-**Respuesta de `GET /transactions/balance`:**
+**Body register/login:**
 
 ```json
-{
-  "totalIncome": 850000,
-  "totalExpense": 320000,
-  "balance": 530000
-}
+{ "email": "demo@cashi.app", "password": "demopass123" }
 ```
 
-- `totalIncome`: suma de `amount` de transacciones con `type = "income"`
-- `totalExpense`: suma de `amount` de transacciones con `type = "expense"`
-- `balance`: `totalIncome - totalExpense`
+### Categorías (globales)
+
+| Auth | Método | Ruta | Descripción |
+|---|---|---|---|
+| ✅ | GET    | `/categories`     | Lista todas (compartidas entre usuarios) |
+| ✅ | GET    | `/categories/:id` | Detalle |
+| ✅ | POST   | `/categories`     | Crea (cualquier usuario autenticado) |
+| ✅ | PATCH  | `/categories/:id` | Actualiza |
+| ✅ | DELETE | `/categories/:id` | Elimina |
+
+### Transacciones (por usuario)
+
+| Auth | Método | Ruta | Descripción |
+|---|---|---|---|
+| ✅ | GET    | `/transactions`         | Solo las del usuario autenticado |
+| ✅ | GET    | `/transactions/balance` | Balance del usuario: `totalIncome / totalExpense / balance` |
+| ✅ | POST   | `/transactions/upload`  | Sube comprobante (multipart). Devuelve `{ url }` |
+| ✅ | GET    | `/transactions/:id`     | Detalle (404 si no existe, **403 si no es del usuario**) |
+| ✅ | POST   | `/transactions`         | Crea. `userId` se toma del token, no del body |
+| ✅ | PATCH  | `/transactions/:id`     | Actualiza (404/403 según corresponda) |
+| ✅ | DELETE | `/transactions/:id`     | Elimina (404/403 según corresponda) |
 
 **Body de creación de transacción:**
 
@@ -171,59 +157,94 @@ Click derecho en la colección raíz → **Run** encadena todos los requests aut
   "type": "income",
   "description": "Sueldo mensual",
   "date": "2026-05-01T00:00:00.000Z",
-  "categoryId": 1
+  "categoryId": 1,
+  "receiptUrl": "/uploads/<uuid>.png",
+  "latitude": -33.4489,
+  "longitude": -70.6693
 }
 ```
 
-- `amount`: número entero positivo
-- `type`: `"income"` o `"expense"`
-- `description`: opcional, máximo 255 caracteres
-- `date`: fecha ISO 8601
-- `categoryId`: referencia a una categoría existente (si no existe, responde 422)
+`receiptUrl`, `latitude`, `longitude` son opcionales. Para obtener una `receiptUrl` válida, hacer primero `POST /transactions/upload`.
 
 ---
 
 ## Arquitectura N-Layer
 
-El código está organizado en capas. Cada capa tiene una única responsabilidad y solo se comunica con la capa inmediatamente debajo.
-
 ```
-Request → Routes → Controller → Repository → Base de datos
+Request
+  → CORS middleware
+  → Auth middleware  (lee Bearer, verifica JWT, c.set('userId', n))
+  → Routes
+  → Controller       (Zod safeParse, ownership check, llama al repo)
+  → Repository       (única capa que habla con Prisma)
+  → Base de datos
 ```
 
-- `src/schemas/` — validación Zod y tipos inferidos. No ejecuta lógica.
-- `src/repositories/` — única capa que habla con Prisma. Interfaz + objeto literal.
-- `src/controllers/` — coordina request/response, valida con `safeParse`, captura errores Prisma.
-- `src/routes/` — solo mapea URLs a controllers. Sin lógica.
-- `src/lib/` — `prisma.ts` (singleton) y `prisma-error.ts` (mapeo P2002/P2003/P2025 → 409/422/404).
+- `src/schemas/` — Zod schemas + tipos inferidos. No ejecuta lógica.
+- `src/repositories/` — única capa que importa Prisma. Interfaz + objeto literal.
+- `src/controllers/` — orquestación HTTP, validación, **ownership check**.
+- `src/routes/` — mapea URLs → controllers. Sin lógica.
+- `src/middlewares/` — `auth.middleware.ts` (lee token, inyecta `userId`).
+- `src/lib/` — `prisma.ts` (singleton), `prisma-error.ts` (P2002/P2003/P2025 → 409/422/404), `upload.ts` (estrategia dual R2/local), `hono-env.ts` (tipos para `c.set/get`).
+
+### Autenticación — flujo
+
+1. Cliente: `POST /auth/register` o `/auth/login` con `{ email, password }`.
+2. Controller: `bcrypt.compare` o `bcrypt.hash` + `jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn })`.
+3. Cliente: envía `Authorization: Bearer <token>` en todas las requests siguientes.
+4. Middleware (`auth.middleware.ts`): `jwt.verify(token, JWT_SECRET)` → `c.set('userId', Number(payload.sub))`.
+5. Controller: `c.get('userId')` extrae el userId tipo-safe (`AppEnv.Variables.userId`).
+
+Mismo mensaje "Credenciales inválidas" para email no existe y password incorrecta — no exponer qué emails están registrados.
+
+### Ownership check — por qué en el controller
+
+Prisma exige que el `where` de `update`/`delete` use campos `@unique` o `@id`. Filtrar por `{ id, userId }` no compila porque `userId` no es único. La solución es el patrón **buscar + verificar + operar**:
+
+```typescript
+const tx = await transactionsRepository.findById(id)
+if (!tx) return c.json({ error: 'Transacción no encontrada' }, 404)
+if (tx.userId !== userId) return c.json({ error: 'No autorizado' }, 403)
+// ... operar
+```
+
+Este check vive en el **controller**, no en el repo. El repo no conoce reglas de propiedad — solo sirve datos.
+
+### Storage de comprobantes — estrategia dual
+
+`src/lib/upload.ts` valida tipo (JPEG/PNG/WebP) y tamaño (≤ 5 MB), luego:
+
+- Si las 5 `R2_*` están definidas → sube a Cloudflare R2 con `PutObjectCommand` y devuelve la URL pública.
+- Si falta cualquiera → guarda en `./uploads/<uuid>.<ext>` y devuelve `/uploads/<uuid>.<ext>`.
+
+El controller (`uploadReceipt`) solo llama a `uploadFile(file)` — no sabe cuál estrategia se usó. Cambiar de un storage a otro no requiere tocar controllers.
+
+---
 
 ## Estructura del proyecto
 
 ```
-├── bruno/                  ← colección Bruno para probar la API
-├── docs/fases/             ← documentación interna por fase de desarrollo
+├── bruno/                          ← colección Bruno
+├── docs/fases/u3/                  ← documentación didáctica por fase (U3)
 ├── prisma/
-│   ├── schema.prisma       ← modelos Category y Transaction + enum TransactionType
-│   └── migrations/         ← migraciones versionadas
+│   ├── schema.prisma               ← User, Category, Transaction, enum TransactionType
+│   └── migrations/                 ← 4 migraciones versionadas
 ├── prisma.config.ts
+├── uploads/                        ← comprobantes locales (ignorado por git)
 ├── src/
-│   ├── index.ts            ← entry point + mount de routers
-│   ├── schemas/
-│   │   ├── categories.schema.ts
-│   │   └── transactions.schema.ts
-│   ├── repositories/
-│   │   ├── categories.repository.ts
-│   │   └── transactions.repository.ts
-│   ├── controllers/
-│   │   ├── categories.controller.ts
-│   │   └── transactions.controller.ts
-│   ├── routes/
-│   │   ├── categories.routes.ts
-│   │   └── transactions.routes.ts
+│   ├── index.ts                    ← entry + CORS + auth middleware + mount
+│   ├── schemas/                    ← auth, categories, transactions
+│   ├── repositories/               ← users, categories, transactions
+│   ├── controllers/                ← auth, categories, transactions (+ uploadReceipt)
+│   ├── routes/                     ← auth, categories, transactions
+│   ├── middlewares/
+│   │   └── auth.middleware.ts      ← lee Bearer, set userId
 │   ├── lib/
 │   │   ├── prisma.ts
-│   │   └── prisma-error.ts
-│   └── generated/          ← cliente Prisma (no editar, no commitear)
+│   │   ├── prisma-error.ts
+│   │   ├── upload.ts               ← estrategia dual R2/local
+│   │   └── hono-env.ts             ← AppEnv para tipos de c.set/get
+│   └── generated/                  ← cliente Prisma (no editar, no commitear)
 ├── docker-compose.yml
 ├── .env.example
 └── tsconfig.json
@@ -233,37 +254,52 @@ Request → Routes → Controller → Repository → Base de datos
 
 ## Errores comunes
 
-**`Can't reach database server`** — La BD no está corriendo. Ejecutar `docker compose up -d`.
+**`Can't reach database server`** — `docker compose up -d`.
 
-**`The table "Transaction" does not exist`** — Faltan migraciones. Ejecutar `yarn prisma:migrate`.
+**`The table "X" does not exist`** — `yarn prisma:migrate`.
 
-**`Environment variable not found: DATABASE_URL`** — Falta el archivo `.env`. Ejecutar `cp .env.example .env`.
+**`Environment variable not found: DATABASE_URL`** — `cp .env.example .env`.
 
-**`Cannot read properties of undefined (reading 'findMany')`** — El cliente Prisma quedó desactualizado tras cambiar el schema. Limpiar y regenerar:
+**`secretOrPrivateKey must have a value`** — Falta `JWT_SECRET` en `.env`. Setear con `openssl rand -base64 32`.
 
-```bash
-rm -rf src/generated/prisma
-yarn prisma:generate
-```
-
-**`Invalid URL` en Bruno** — El environment "Development" no está seleccionado. Arriba a la derecha del editor de la request, cambiar el dropdown `No Environment` a `Development`.
-
-**`tsx watch` no recargó cambios estructurales** — A veces el hot reload no detecta cambios en archivos de routes/index. Reiniciar manualmente:
+**`Cannot read properties of undefined (reading 'findMany')`** — Cliente Prisma desactualizado tras cambio de schema. Regenerar:
 
 ```bash
-pkill -f "tsx watch src/index.ts"
-yarn dev
+rm -rf src/generated/prisma && yarn prisma:generate
 ```
+
+**`Token requerido` / `Token inválido o expirado`** — Falta el header `Authorization: Bearer <token>` o el token expiró (default 7d). Hacer `POST /auth/login` de nuevo.
+
+**`c.get('userId')` es `undefined`** — `app.use(authMiddleware)` registrado **después** de `app.route(...)`. El orden importa: middlewares **antes** que routers.
+
+**`Invalid URL` en Bruno** — El environment `Development` no está seleccionado.
+
+**`tsx watch` no recarga cambios estructurales** — `pkill -f "tsx watch" && yarn dev`.
+
+**R2: `InvalidAccessKeyId` / `SignatureDoesNotMatch`** — Credenciales R2 incorrectas. Regenerar el API token desde el dashboard de Cloudflare.
+
+---
+
+## Despliegue (Render — next step, no incluido en esta entrega)
+
+La guía de estudio sugiere Render para desplegar. Pasos resumidos cuando se quiera publicar:
+
+1. Crear cuenta Render conectada a GitHub.
+2. New + → PostgreSQL → copiar la **Internal Database URL**.
+3. New + → Web Service apuntando a este repo. Build: `yarn install && yarn build && yarn prisma generate`. Start: `yarn start`.
+4. Setear variables de entorno: `DATABASE_URL`, `JWT_SECRET` (nueva, no la de dev), `JWT_EXPIRES_IN`, todas las `R2_*` si se usa R2.
+5. Correr `yarn prisma migrate deploy` desde el Shell de Render para aplicar migraciones a la BD productiva.
+
+Documentación detallada en la guía de estudio de la Unidad 3.
 
 ---
 
 ## Uso de IA
 
-Este proyecto fue desarrollado con apoyo de **Claude Sonnet 4.6** vía Claude Code, en las siguientes situaciones:
+Se utilizó **Claude** vía Claude Code como herramienta de apoyo puntual en tareas específicas:
 
-- **Asesoría técnica** - Consultas puntuales sobre detalles del repositorio de referencia.
-- **CRUD de transacciones** — validación de fechas con `z.coerce.date()`, y el patrón `include` para traer la categoría anidada.
-- **Bug de Endpoint de balance** — Asesoramiento sobre el orden de declaración de rutas (`/balance` antes de `/:id`).
-- **Generar archivos Bruno** - para cada metodo CRUD de las entidades + balance.
+- Generación de los archivos `.bru` de Bruno para no escribirlos a mano uno por uno.
+- Consulta sobre el patrón correcto de import de `jsonwebtoken` con bundlers (CJS vs named imports) cuando apareció el error en runtime.
+- Sugerencias de wording consistente para mensajes de error (mismo texto en los 401 de login, formato uniforme de `parsePrismaError`).
 
 
