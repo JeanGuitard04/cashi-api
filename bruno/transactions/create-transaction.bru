@@ -22,8 +22,15 @@ body:json {
     "type": "income",
     "description": "Sueldo mensual",
     "date": "2026-05-01T00:00:00.000Z",
-    "categoryId": {{categoryId}}
+    "categoryId": {{categoryId}},
+    "receiptUrl": "{{receiptUrl}}",
+    "latitude": -33.4489,
+    "longitude": -70.6693
   }
+}
+
+vars:pre-request {
+  categoryId: 1
 }
 
 script:post-response {
@@ -34,14 +41,17 @@ script:post-response {
 
 docs {
   Crea una nueva transacción asociada a una categoría existente.
-
+  
   ## Body
   - amount: Monto entero positivo (requerido)
   - type: "income" o "expense" (requerido)
   - description: Descripción libre (opcional, max 255)
   - date: Fecha ISO 8601 (requerida)
   - categoryId: ID de la categoría (requerido, debe existir)
-
+  - receiptUrl: URL del comprobante (opcional, max 500). Setear primero con Upload Receipt
+  - latitude: Coordenada GPS (opcional, [-90, 90])
+  - longitude: Coordenada GPS (opcional, [-180, 180])
+  
   ## Respuesta
   Devuelve 201 con la transacción creada (incluyendo su categoría).
   Devuelve 400 si el body es inválido.
