@@ -1,0 +1,42 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "demo@cashi.app",
+    "password": "demopass123"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.token) {
+    bru.setEnvVar("token", res.body.token);
+    bru.setEnvVar("userId", res.body.user.id);
+  }
+}
+
+docs {
+  Inicia sesión. Devuelve un JWT nuevo.
+  
+  ## Body
+  - email
+  - password
+  
+  ## Respuesta
+  200 con { token, user: { id, email } }. Setea {{token}} automáticamente.
+  401 con "Credenciales inválidas" si email no existe O password incorrecta (mismo mensaje para no exponer qué emails están registrados).
+}

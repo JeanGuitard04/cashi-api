@@ -1,15 +1,17 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import authRouter         from './routes/auth.routes.js'
 import categoriesRouter   from './routes/categories.routes.js'
 import transactionsRouter from './routes/transactions.routes.js'
 
 const app = new Hono()
 
 // Health check
-app.get('/', (c) => c.json({ status: 'ok', message: 'Cashi API — Unidad 2' }))
+app.get('/', (c) => c.json({ status: 'ok', message: 'Cashi API — Unidad 3' }))
 
 // Montar routers por recurso
+app.route('/auth',         authRouter)
 app.route('/categories',   categoriesRouter)
 app.route('/transactions', transactionsRouter)
 

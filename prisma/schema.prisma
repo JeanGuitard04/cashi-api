@@ -12,6 +12,15 @@ enum TransactionType {
   expense
 }
 
+// Un usuario tiene email único y contraseña hasheada con bcrypt.
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
 // Una categoría puede tener muchas transacciones (one-to-many).
 model Category {
   id           Int           @id @default(autoincrement())
