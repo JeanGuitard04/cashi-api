@@ -8,20 +8,22 @@ export type TransactionWithCategory = Transaction & {
 
 export type SumByType = Array<{ type: TransactionType; total: number }>
 
+export type CreateTransactionData = CreateTransactionInput & { userId: number }
+
 interface TransactionRepository {
-  findAll:   ()                                          => Promise<TransactionWithCategory[]>
-  findById:  (id: number)                                => Promise<TransactionWithCategory | null>
-  create:    (data: CreateTransactionInput)              => Promise<TransactionWithCategory>
-  update:    (id: number, data: UpdateTransactionInput)  => Promise<TransactionWithCategory>
-  remove:    (id: number)                                => Promise<void>
-  sumByType: ()                                          => Promise<SumByType>
+  findAllByUser: (userId: number)                            => Promise<TransactionWithCategory[]>
+  findById:      (id: number)                                => Promise<TransactionWithCategory | null>
+  create:        (data: CreateTransactionData)               => Promise<TransactionWithCategory>
+  update:        (id: number, data: UpdateTransactionInput)  => Promise<TransactionWithCategory>
+  remove:        (id: number)                                => Promise<void>
+  sumByTypeForUser: (userId: number)                         => Promise<SumByType>
 }
 
 const transactionInclude = { category: true } as const
 
 export const transactionsRepository: TransactionRepository = {
-  findAll: () =>
-    prisma.transaction.findMany({ include: transactionInclude }),
+  findAllByUser: (userId) =>
+    prisma.transaction.findMany({ where: { userId }, include: transactionInclude }),
 
   findById: (id) =>
     prisma.transaction.findUnique({ where: { id }, include: transactionInclude }),
@@ -35,9 +37,10 @@ export const transactionsRepository: TransactionRepository = {
   remove: (id) =>
     prisma.transaction.delete({ where: { id } }).then(() => undefined),
 
-  sumByType: async () => {
+  sumByTypeForUser: async (userId) => {
     const rows = await prisma.transaction.groupBy({
       by: ['type'],
+      where: { userId },
       _sum: { amount: true }
     })
     return rows.map(r => ({ type: r.type, total: r._sum.amount ?? 0 }))

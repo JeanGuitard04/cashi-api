@@ -5,16 +5,21 @@ import {
   updateTransactionSchema
 } from '../schemas/transactions.schema.js'
 import { parsePrismaError } from '../lib/prisma-error.js'
+import type { AppEnv } from '../lib/hono-env.js'
+
+type Ctx = Context<AppEnv>
 
 // GET /transactions
-export const getTransactions = async (c: Context) => {
-  const transactions = await transactionsRepository.findAll()
+export const getTransactions = async (c: Ctx) => {
+  const userId = c.get('userId')
+  const transactions = await transactionsRepository.findAllByUser(userId)
   return c.json(transactions)
 }
 
 // GET /transactions/balance
-export const getBalance = async (c: Context) => {
-  const sums = await transactionsRepository.sumByType()
+export const getBalance = async (c: Ctx) => {
+  const userId = c.get('userId')
+  const sums = await transactionsRepository.sumByTypeForUser(userId)
   const totalIncome  = sums.find(s => s.type === 'income')?.total  ?? 0
   const totalExpense = sums.find(s => s.type === 'expense')?.total ?? 0
   const balance = totalIncome - totalExpense
@@ -22,20 +27,23 @@ export const getBalance = async (c: Context) => {
 }
 
 // GET /transactions/:id
-export const getTransactionById = async (c: Context) => {
+export const getTransactionById = async (c: Ctx) => {
+  const userId = c.get('userId')
   const id = Number(c.req.param('id'))
   const transaction = await transactionsRepository.findById(id)
   if (!transaction) return c.json({ error: 'Transacción no encontrada' }, 404)
+  if (transaction.userId !== userId) return c.json({ error: 'No autorizado' }, 403)
   return c.json(transaction)
 }
 
-// POST /transactions
-export const createTransaction = async (c: Context) => {
+// POST /transactions — userId NO viene del body; se toma del token.
+export const createTransaction = async (c: Ctx) => {
+  const userId = c.get('userId')
   const body = await c.req.json()
   const result = createTransactionSchema.safeParse(body)
   if (!result.success) return c.json({ errors: result.error.issues }, 400)
   try {
-    const transaction = await transactionsRepository.create(result.data)
+    const transaction = await transactionsRepository.create({ ...result.data, userId })
     return c.json(transaction, 201)
   } catch (error) {
     const { status, message } = parsePrismaError(error)
@@ -43,12 +51,18 @@ export const createTransaction = async (c: Context) => {
   }
 }
 
-// PATCH /transactions/:id
-export const updateTransaction = async (c: Context) => {
+// PATCH /transactions/:id — ownership check ANTES de modificar.
+export const updateTransaction = async (c: Ctx) => {
+  const userId = c.get('userId')
   const id = Number(c.req.param('id'))
   const body = await c.req.json()
   const result = updateTransactionSchema.safeParse(body)
   if (!result.success) return c.json({ errors: result.error.issues }, 400)
+
+  const existing = await transactionsRepository.findById(id)
+  if (!existing) return c.json({ error: 'Transacción no encontrada' }, 404)
+  if (existing.userId !== userId) return c.json({ error: 'No autorizado' }, 403)
+
   try {
     const transaction = await transactionsRepository.update(id, result.data)
     return c.json(transaction)
@@ -58,9 +72,15 @@ export const updateTransaction = async (c: Context) => {
   }
 }
 
-// DELETE /transactions/:id
-export const deleteTransaction = async (c: Context) => {
+// DELETE /transactions/:id — ownership check ANTES de borrar.
+export const deleteTransaction = async (c: Ctx) => {
+  const userId = c.get('userId')
   const id = Number(c.req.param('id'))
+
+  const existing = await transactionsRepository.findById(id)
+  if (!existing) return c.json({ error: 'Transacción no encontrada' }, 404)
+  if (existing.userId !== userId) return c.json({ error: 'No autorizado' }, 403)
+
   try {
     await transactionsRepository.remove(id)
     return c.json({ message: 'Transacción eliminada' })

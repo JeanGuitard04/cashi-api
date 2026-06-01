@@ -21,14 +21,14 @@ model User {
   transactions Transaction[]
 }
 
-// Una categoría puede tener muchas transacciones (one-to-many).
+// Una categoría puede tener muchas transacciones (one-to-many). Globales — no por usuario.
 model Category {
   id           Int           @id @default(autoincrement())
   name         String        @unique
   transactions Transaction[]
 }
 
-// Una transacción pertenece a una categoría.
+// Una transacción pertenece a un usuario y a una categoría.
 model Transaction {
   id          Int             @id @default(autoincrement())
   amount      Int
@@ -37,4 +37,6 @@ model Transaction {
   date        DateTime
   category    Category        @relation(fields: [categoryId], references: [id])
   categoryId  Int
+  user        User            @relation(fields: [userId], references: [id])
+  userId      Int
 }
