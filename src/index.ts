@@ -1,13 +1,21 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { authMiddleware } from './middlewares/auth.middleware.js'
+import type { AppEnv } from './lib/hono-env.js'
 import authRouter         from './routes/auth.routes.js'
 import categoriesRouter   from './routes/categories.routes.js'
 import transactionsRouter from './routes/transactions.routes.js'
 
-const app = new Hono()
+const app = new Hono<AppEnv>()
 
-// Health check
+app.use('*', cors())
+
+app.use('/categories/*',   authMiddleware)
+app.use('/transactions/*', authMiddleware)
+
+// Health check (público)
 app.get('/', (c) => c.json({ status: 'ok', message: 'Cashi API — Unidad 3' }))
 
 // Montar routers por recurso
