@@ -10,6 +10,10 @@ RUN yarn install --frozen-lockfile
 
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+# prisma.config.ts exige DATABASE_URL para cargarse. `prisma generate` solo
+# necesita el schema (no se conecta a la BD), así que ponemos un placeholder
+# que solo vive en este stage builder.
+ENV DATABASE_URL=postgres://placeholder:placeholder@placeholder:5432/placeholder
 RUN yarn prisma:generate
 
 COPY tsconfig.json ./
