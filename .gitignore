@@ -11,6 +11,7 @@ src/generated/
 .env
 .env.*
 !.env.example
+!infra/.env.production.example
 
 # Yarn
 .yarn/cache

@@ -1,0 +1,25 @@
+services:
+  cashi-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: cashi-api:latest
+    container_name: cashi-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - cashi_uploads:/app/uploads
+    networks:
+      - red_antakarana       # Hablar con core_postgres
+      - proxy_manager        # Que NPM pueda enrutar HTTPS
+
+networks:
+  red_antakarana:
+    external: true
+  proxy_manager:
+    external: true
+    name: 00_proxy_manager_default
+
+volumes:
+  cashi_uploads:
