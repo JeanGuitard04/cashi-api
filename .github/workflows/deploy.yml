@@ -1,0 +1,39 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cashi-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH deploy to antakarana-vps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull, build and restart container
+        uses: appleboy/ssh-action@v1
+        with:
+          host:       ${{ secrets.VPS_SSH_HOST }}
+          port:       ${{ secrets.VPS_SSH_PORT }}
+          username:   ${{ secrets.VPS_SSH_USER }}
+          key:        ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /data/docker_infra/09_cashi_api/cashi-api
+            echo "--- pull ---"
+            git pull --ff-only origin main
+            echo "--- build ---"
+            cd infra
+            docker compose build
+            echo "--- up ---"
+            docker compose up -d
+            echo "--- prune ---"
+            docker image prune -f
+            echo "--- health ---"
+            sleep 4
+            docker exec cashi-api wget -qO- http://localhost:3000/ || (docker logs cashi-api --tail=30 && exit 1)
