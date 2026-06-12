@@ -1,8 +1,10 @@
-# Cashi API — Unidad 3
+# Cashi API — Examen Final
 
-API REST de finanzas personales con **arquitectura N-Layer**, **autenticación JWT** y **subida de comprobantes**. Cada usuario gestiona sus propias transacciones, organizadas por categorías globales, y puede adjuntar la foto del comprobante a cada movimiento.
+API REST de finanzas personales con **arquitectura N-Layer**, **autenticación JWT**, **subida de comprobantes** y **deploy automático**. Cada usuario gestiona sus propias transacciones, organizadas por categorías globales, y puede adjuntar la foto del comprobante a cada movimiento.
 
-**Stack:** Node.js · TypeScript · Hono · Prisma 7 · Zod · PostgreSQL · Docker · bcryptjs · jsonwebtoken · Cloudflare R2 (opcional)
+**API pública:** https://cashi-api.antakarana.ai
+
+**Stack:** Node.js · TypeScript · Hono · Prisma 7 · Zod · PostgreSQL · Docker · bcryptjs · jsonwebtoken
 
 ---
 
@@ -10,6 +12,7 @@ API REST de finanzas personales con **arquitectura N-Layer**, **autenticación J
 
 - **Unidad 2** (CRUD + balance): https://youtu.be/0J_7l4rZoHs
 - **Unidad 3** (auth + comprobantes): https://youtu.be/ftUPH_i4-14
+- **Examen Final** (despliegue y defensa): _por subir antes del 12 de junio_
 
 ---
 
@@ -280,17 +283,33 @@ rm -rf src/generated/prisma && yarn prisma:generate
 
 ---
 
-## Despliegue (Render — next step, no incluido en esta entrega)
+## Despliegue en producción
 
-La guía de estudio sugiere Render para desplegar. Pasos resumidos cuando se quiera publicar:
+La API está desplegada en un **VPS propio** (`antakarana.ai`) con stack Docker. Justificación de la elección frente a Render/Railway: latencia menor para usuarios en Chile (servidor en Santiago), sin cold starts del free tier, filesystem persistente para los comprobantes (sin necesidad de R2 en esta entrega), reutilización de infraestructura ya existente (Postgres y Nginx Proxy Manager).
 
-1. Crear cuenta Render conectada a GitHub.
-2. New + → PostgreSQL → copiar la **Internal Database URL**.
-3. New + → Web Service apuntando a este repo. Build: `yarn install && yarn build && yarn prisma generate`. Start: `yarn start`.
-4. Setear variables de entorno: `DATABASE_URL`, `JWT_SECRET` (nueva, no la de dev), `JWT_EXPIRES_IN`, todas las `R2_*` si se usa R2.
-5. Correr `yarn prisma migrate deploy` desde el Shell de Render para aplicar migraciones a la BD productiva.
+**URL pública:** https://cashi-api.antakarana.ai
 
-Documentación detallada en la guía de estudio de la Unidad 3.
+### Infraestructura
+
+| Componente | Detalle |
+|---|---|
+| Container app | `cashi-api` (Docker, imagen multi-stage Alpine) |
+| BD | `cashidb` en `core_postgres` (PostgreSQL 16 con pgvector, ya existente en el VPS) |
+| Reverse proxy + HTTPS | Nginx Proxy Manager con cert Let's Encrypt auto-renovado |
+| Storage de comprobantes | Volumen Docker nombrado `cashi_uploads` (persistente) |
+| Variables de entorno | `infra/.env.production` en el VPS (`chmod 600`, NO en repo) |
+
+### Deploy automático
+
+Cada `git push` a `main` dispara `.github/workflows/deploy.yml`:
+
+1. GitHub Actions hace SSH al VPS con una key dedicada.
+2. `git pull --ff-only origin main` en el VPS.
+3. `docker compose build` y `up -d` (el `CMD` corre `prisma migrate deploy` antes del server).
+4. `docker image prune -f` para limpiar imágenes huérfanas.
+5. Smoke test interno al container; si falla, el job queda rojo.
+
+Tiempo total por deploy: ~30 segundos.
 
 ---
 
@@ -301,5 +320,6 @@ Se utilizó **Claude** vía Claude Code como herramienta de apoyo puntual en tar
 - Generación de los archivos `.bru` de Bruno para no escribirlos a mano uno por uno.
 - Consulta sobre el patrón correcto de import de `jsonwebtoken` con bundlers (CJS vs named imports) cuando apareció el error en runtime.
 - Sugerencias de wording consistente para mensajes de error (mismo texto en los 401 de login, formato uniforme de `parsePrismaError`).
+- Asistencia en la configuración de el flujo de GitHub Actions para el deploy automático.
 
 
