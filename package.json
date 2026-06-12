@@ -2,13 +2,17 @@
   "name": "cashi-api",
   "version": "1.0.0",
   "description": "API de Finanzas Personales (Cashi) con arquitectura N-Layer: Hono + Prisma + Zod + PostgreSQL",
-  "main": "dist/index.js",
+  "main": "dist/index.mjs",
   "packageManager": "yarn@1.22.4",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsdown",
-    "start": "node dist/index.js",
+    "start": "node dist/index.mjs",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:generate": "prisma generate"
   },

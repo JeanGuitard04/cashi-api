@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+src/generated
+docs
+bruno
+README.md
+*.log
+.DS_Store
+.npmrc
