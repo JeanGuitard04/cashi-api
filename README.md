@@ -4,7 +4,7 @@ API REST de finanzas personales con **arquitectura N-Layer**, **autenticación J
 
 **API pública:** https://cashi-api.antakarana.ai
 
-**Stack:** Node.js · TypeScript · Hono · Prisma 7 · Zod · PostgreSQL · Docker · bcryptjs · jsonwebtoken
+**Stack:** Node.js · TypeScript · **Hono** · **Prisma 7** · Zod · **PostgreSQL** · Docker · **bcryptjs** · jsonwebtoken
 
 ---
 
@@ -12,7 +12,6 @@ API REST de finanzas personales con **arquitectura N-Layer**, **autenticación J
 
 - **Unidad 2** (CRUD + balance): https://youtu.be/0J_7l4rZoHs
 - **Unidad 3** (auth + comprobantes): https://youtu.be/ftUPH_i4-14
-- **Examen Final** (despliegue y defensa): _por subir antes del 12 de junio_
 
 ---
 
